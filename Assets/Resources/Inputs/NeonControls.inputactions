@@ -1,0 +1,92 @@
+{
+  "name": "NeonControls",
+  "maps": [
+    {
+      "name": "Drive",
+      "id": "eb384018-c79b-4bb8-b9b7-1ddfdf75923a",
+      "actions": [
+        {
+          "name": "Left",
+          "type": "Button",
+          "id": "4b75bc91-22d3-4b1f-89e2-8ebec75c8a11",
+          "expectedControlType": "Button"
+        },
+        {
+          "name": "Right",
+          "type": "Button",
+          "id": "b24293c8-058f-4f75-9cc4-e3817f2b4563",
+          "expectedControlType": "Button"
+        },
+        {
+          "name": "Pause",
+          "type": "Button",
+          "id": "5c5d8067-a1e2-4b85-887d-c74cc2f516d9",
+          "expectedControlType": "Button"
+        },
+        {
+          "name": "Confirm",
+          "type": "Button",
+          "id": "a3cc3b2c-f697-40cd-af76-cd8d574a65bc",
+          "expectedControlType": "Button"
+        },
+        {
+          "name": "FireworkTest",
+          "type": "Button",
+          "id": "8a775aba-337a-4446-b7af-0222a9a578ab",
+          "expectedControlType": "Button"
+        }
+      ],
+      "bindings": [
+        {
+          "path": "<Keyboard>/a",
+          "action": "Left"
+        },
+        {
+          "path": "<Keyboard>/leftArrow",
+          "action": "Left"
+        },
+        {
+          "path": "<Gamepad>/dpad/left",
+          "action": "Left"
+        },
+        {
+          "path": "<Keyboard>/d",
+          "action": "Right"
+        },
+        {
+          "path": "<Keyboard>/rightArrow",
+          "action": "Right"
+        },
+        {
+          "path": "<Gamepad>/dpad/right",
+          "action": "Right"
+        },
+        {
+          "path": "<Keyboard>/escape",
+          "action": "Pause"
+        },
+        {
+          "path": "<Gamepad>/start",
+          "action": "Pause"
+        },
+        {
+          "path": "<Keyboard>/enter",
+          "action": "Confirm"
+        },
+        {
+          "path": "<Keyboard>/space",
+          "action": "Confirm"
+        },
+        {
+          "path": "<Gamepad>/buttonSouth",
+          "action": "Confirm"
+        },
+        {
+          "path": "<Keyboard>/f",
+          "action": "FireworkTest"
+        }
+      ]
+    }
+  ],
+  "controlSchemes": []
+}
