@@ -72,12 +72,30 @@ namespace NeonHighway
             underGlowStrip = strip ? strip.GetComponent<Renderer>() : null;
             stripBlock = new MaterialPropertyBlock();
             underGlow = NewLight(player, "Animated cyan underglow", LightType.Point, NeonVisuals.Cyan, 4f, 9f, new Vector3(0,.30f,0));
+            // The original 3-intensity spot lights barely reached the road in URP.
+            // Use focused headlights, plus independent soft light pools on asphalt.
+            // The pools guarantee a visible beam even if URP additional lights are disabled.
             headLights = new Light[2];
-            for(int s=0;s<2;s++)
+            for (int s = 0; s < headLights.Length; s++)
             {
-                headLights[s]=NewLight(player,"Headlight cone",LightType.Spot,new Color(.86f,.92f,1f),3f,35f,new Vector3(s==0?-.65f:.65f,.76f,2.03f));
-                headLights[s].spotAngle=54f;
-                headLights[s].transform.localRotation=Quaternion.Euler(6,0,0);
+                float side = s == 0 ? -1f : 1f;
+                headLights[s] = NewLight(player, "Bright front headlight " + (s + 1),
+                    LightType.Spot, new Color(.92f, .95f, 1f), 12f, 62f,
+                    new Vector3(side * .64f, .78f, 2.21f));
+                headLights[s].spotAngle = 53f;
+                headLights[s].innerSpotAngle = 29f;
+                headLights[s].transform.localRotation = Quaternion.Euler(5f, side * 1.5f, 0f);
+
+                // Feathered additive pool: not a solid rectangle or hard white strip.
+                var roadLightMaterial = new Material(groundGlowMaterial)
+                    { name = "Soft forward headlight road wash " + (s + 1) };
+                if (roadLightMaterial.HasProperty("_GlowColor"))
+                    roadLightMaterial.SetColor("_GlowColor", new Color(.83f, .90f, 1f, 1f));
+                else if (roadLightMaterial.HasProperty("_BaseColor"))
+                    roadLightMaterial.SetColor("_BaseColor", new Color(.83f, .90f, 1f, 1f));
+                else if (roadLightMaterial.HasProperty("_Color"))
+                    roadLightMaterial.SetColor("_Color", new Color(.83f, .90f, 1f, 1f));
+                CreateHeadlightRoadWash(player, side * .64f, roadLightMaterial);
             }
             nextFirework = 2.0f;
         }
@@ -141,6 +159,61 @@ namespace NeonHighway
             renderer.shadowCastingMode=UnityEngine.Rendering.ShadowCastingMode.Off;
             renderer.receiveShadows=false;
             return obj.transform;
+        }
+
+        // A soft, tapered light footprint on the road ahead of each front lamp.
+        // The vertex alpha fades at BOTH edges and at either end to avoid visible polygons.
+        // Generated only once; no per-frame mesh allocation or garbage collection.
+        static void CreateHeadlightRoadWash(Transform car, float sideX, Material material)
+        {
+            var go = new GameObject("SOFT FRONT HEADLIGHT | road illumination");
+            go.transform.SetParent(car, false);
+            // Same road plane as the undercar glow, just slightly above it.
+            go.transform.localPosition = new Vector3(0f, -.011f, 0f);
+            const int rows = 22;
+            const int cols = 5;
+            var vertices = new Vector3[rows * cols];
+            var colors = new Color[rows * cols];
+            var triangles = new int[(rows - 1) * (cols - 1) * 6];
+            float[] lateral = { -1f, -.55f, 0f, .55f, 1f };
+            float[] sideAlpha = { 0f, .54f, 1f, .54f, 0f };
+            for (int row = 0; row < rows; row++)
+            {
+                float t = row / (float)(rows - 1);
+                float z = Mathf.Lerp(2.7f, 29f, t);
+                float spread = Mathf.Lerp(.20f, 2.1f, t);
+                // Smoothly appear near the bumper, then vanish into the distance.
+                float lengthFade = Mathf.Pow(Mathf.Sin(t * Mathf.PI), .75f) *
+                    (1f - Mathf.SmoothStep(.72f, 1f, t));
+                for (int col = 0; col < cols; col++)
+                {
+                    int index = row * cols + col;
+                    vertices[index] = new Vector3(sideX + lateral[col] * spread, 0f, z);
+                    colors[index] = new Color(1f, 1f, 1f,
+                        .32f * lengthFade * sideAlpha[col]);
+                }
+            }
+            int k = 0;
+            for (int row = 0; row < rows - 1; row++)
+            for (int col = 0; col < cols - 1; col++)
+            {
+                int a = row * cols + col;
+                int b = a + 1;
+                int c = a + cols;
+                int d = c + 1;
+                triangles[k++] = a; triangles[k++] = c; triangles[k++] = b;
+                triangles[k++] = b; triangles[k++] = c; triangles[k++] = d;
+            }
+            var mesh = new Mesh { name = "Feathered twin headlight beam" };
+            mesh.vertices = vertices;
+            mesh.colors = colors;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+            go.AddComponent<MeshFilter>().sharedMesh = mesh;
+            var r = go.AddComponent<MeshRenderer>();
+            r.sharedMaterial = material;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            r.receiveShadows = false;
         }
 
         static Light NewLight(Transform parent,string label,LightType type,Color color,float intensity,float range,Vector3 pos)
@@ -406,7 +479,8 @@ namespace NeonHighway
             underGlow.color=baseNeon;
             underGlow.intensity=Mathf.Lerp(2.5f,7.5f,normalized)*pulse;
             underGlow.range=Mathf.Lerp(7f,13f,normalized);
-            foreach(var h in headLights) h.intensity=Mathf.Lerp(2.0f,4.3f,normalized);
+            // Gentle brightening with speed; no harsh flicker or overblown white glare.
+            foreach (var h in headLights) h.intensity = Mathf.Lerp(12f, 17f, normalized);
 
             AnimateExhaust(exhaustLeft, normalized, playing);
             AnimateExhaust(exhaustRight, normalized, playing);
